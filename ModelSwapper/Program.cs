@@ -125,19 +125,22 @@ namespace ModelSwapper
         static void Main(string[] args)
         {
             const string bundlePath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\002\BundleTarget\BigFile_0002.big";
-            const string patchPath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\002\Patches\Patch_0001.big";
+            const string patchPath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\002\Patches\Patch_0000.big";
+            const string patch2Path = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\002\Patches\Patch_0001.big";
+
             var simtypeTable = new[]
             {
                 BuildTuple(200, id:677344, Fab.Torso, "Clothing_Peasant03_Torso"),
-                BuildTuple(201, id:677345, Fab.Head, "Clothing_Peasant03_Legs"),
-                BuildTuple(202, id:677346, Fab.Legs, "Clothing_Peasant03_Head"),
-                BuildTuple(203, id:677347, Fab.Feet, "Clothing_Peasant03_Feet")
+                //BuildTuple(201, id:677345, Fab.Head, "Clothing_Peasant03_Legs"),
+                //BuildTuple(202, id:677346, Fab.Legs, "Clothing_Peasant03_Head"),
+                //BuildTuple(203, id:677347, Fab.Feet, "Clothing_Peasant03_Feet")
             };
             File.WriteAllBytes(bundlePath, BuildBigFile((14, BuildSimtypeMgrBundle(simtypeTable.Select(x => x.id)))));
-            File.WriteAllBytes(patchPath, BuildBigFile(
+            File.WriteAllBytes(patchPath, BuildBigFile(simtypeTable.Select(x => (x.bigFileId, x.data)).ToArray()));
+            File.WriteAllBytes(patch2Path, BuildBigFile(
             new[]{
-                (id: 119, BuildSimtypeInit(simtypeTable.Select(x => (x.id, x.name)).ToArray())),
-            }.Concat(simtypeTable.Select(x => (x.bigFileId, x.data))).ToArray()));
+                (id: 119, BuildSimtypeInit(simtypeTable.Select(x => (x.id, x.name)).ToArray()))
+            }));
         }
 
         static void Write<T>(this byte[] bytes, int offset, T value)
