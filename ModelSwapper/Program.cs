@@ -89,7 +89,7 @@ namespace ModelSwapper
             foreach(var (id, name) in newNames)
             { 
                 var hash = GetHash(name);
-                newData.Write(eol1, id + 1);
+                newData.Write(eol1, id);
                 newData.Write(eol2, hash);
                 eol1 += 4;
                 eol2 += 4;
@@ -97,7 +97,7 @@ namespace ModelSwapper
             return newData;
         }
 
-        static byte[] BuildBigFile(params (int id, byte[] data)[] fileTable)
+        static byte[] BuildBigFile(params (int id, byte[] data, int flag)[] fileTable)
         {
             ReadOnlySpan<byte> header = new byte[] {
                 0x80, 0xC7, 0xC8, 0xC2, 0x10, 0x00, 0x00, 0x00, 0x01, 0x1E, 0x00, 0x00, 0x00, 0x42, 0x48, 0x47,
@@ -108,13 +108,13 @@ namespace ModelSwapper
             bytes.Write(header.Length, fileTable.Length);
             var currentOffset = header.Length + 4;
             var fileOffset = currentOffset + (20 * fileTable.Length);
-            foreach (var (id, data) in fileTable)
+            foreach (var (id, data, flag) in fileTable)
             {
                 bytes.Write(currentOffset, data.Length);
                 bytes.Write(currentOffset + 4, data.Length);
                 bytes.Write(currentOffset + 8, fileOffset);
                 bytes.Write(currentOffset + 12, id);
-                bytes.Write(currentOffset + 16, 0x94);
+                bytes.Write(currentOffset + 16, flag);
                 data.CopyTo(bytes.AsSpan(fileOffset));
                 fileOffset += data.Length;
                 currentOffset += 20;
@@ -126,9 +126,8 @@ namespace ModelSwapper
         {
             const string bundlePath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\002\BundleTarget\BigFile_0002.big";
             const string patchPath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\002\Patches\Patch_0000.big";
-            const string patch2Path = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\002\Patches\Patch_0001.big";
-
-            var simtypeTable = new[]
+            
+            var simtypeTable = new (int bigFileId, int id, string name, byte[] data)[]
             {
                 BuildTuple(8675309, simtypeId:677344, Fab.Torso, "Clothing_Peasant03_Torso"),
                 //BuildTuple(201, id:677345, Fab.Head, "Clothing_Peasant03_Legs"),
@@ -138,14 +137,15 @@ namespace ModelSwapper
             // simtypeMGR
             var simtypeMgr = BuildSimtypeMgrBundle(simtypeTable.Select(x => x.id));
             File.WriteAllBytes("simtype_mgr.bundle", simtypeMgr);
-            File.WriteAllBytes(bundlePath, BuildBigFile((14, simtypeMgr)));
+            File.WriteAllBytes(bundlePath, BuildBigFile((14, simtypeMgr, 0x14)));
 
             // simtype init table
             var simtypeInitFile = BuildSimtypeInit(simtypeTable.Select(x => (x.id, x.name)).ToArray());
             File.WriteAllBytes("simtype_init.bin", simtypeInitFile);
-            File.WriteAllBytes(patch2Path, BuildBigFile((id: 119,simtypeInitFile)));
             // simtype bundle.
-            File.WriteAllBytes(patchPath, BuildBigFile(simtypeTable.Select(x => (x.bigFileId, x.data)).ToArray()));
+            File.WriteAllBytes(patchPath, BuildBigFile(fileTable:
+                new[] { (id: 119, simtypeInitFile, 0x14) }.Concat(
+                simtypeTable.Select(x => (x.bigFileId, x.data, 0x94))).ToArray()));
         }
 
         static void Write<T>(this byte[] bytes, int offset, T value)
