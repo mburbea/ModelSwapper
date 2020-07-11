@@ -21,6 +21,9 @@
     <None Update="legs.simtype_bxml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="simtype_init.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="torso.simtype_bxml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

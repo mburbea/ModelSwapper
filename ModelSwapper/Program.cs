@@ -34,14 +34,15 @@ namespace ModelSwapper
             int hash = 0;
             for (int i = val.Length - 1; i > -1; i--)
             {
-                var c = val[i];
+                int c = val[i];
                 hash += (i + 1) * hashtable[c % 50] + (c * hashtable[i % 50]);
             }
-            return hash;
+            
+           return hash;
         }
 
-        static (int id, string name, byte[] data) BuildTuple(Fab fab, string name)
-            => (GetHash(name), name, LoadModifiedSimtype(fab));
+        static (int id, string name, byte[] data) BuildTuple(Fab fab, string name, int? loc= null)
+            => (loc ?? GetHash(name), name, LoadModifiedSimtype(fab));
 
 
         static byte[] BuildSimtypeMgrBundle(IEnumerable<int> entries)
@@ -54,11 +55,11 @@ namespace ModelSwapper
                 {
                     output.Write(16 + i * 4, entries[i]);
                     output[16 + (entries.Length * 4) + i] = 0x0d;
-                    output[16 + (entries.Length * 6) + i] = (byte)(i == 0 ? 1 : 0);
+                    output[16 + (entries.Length * 6) + i] = (byte)(i < 2 ? 1 : 0);
                 }
                 return output;
             }
-            return WriteSimtypeMgrInternal(new[] { -2145859145 }.Concat(entries).ToArray());
+            return WriteSimtypeMgrInternal(new[] {unchecked((int)0x80_00_1F_C2u), unchecked((int)0x80_1d_80_74u) }.Concat(entries).ToArray());
         }
 
         static byte[] LoadModifiedSimtype(Fab fab)
@@ -69,16 +70,7 @@ namespace ModelSwapper
 
         static byte[] BuildSimtypeInit(params (int simtypeId, string name)[] newNames)
         {
-            ReadOnlySpan<byte> data = new byte[]
-            {
-                0x01,0x00,0x00,0x00,0x12,0x00,0x00,0x00,0xB7,0xC9,0x18,0x00,0x9D,0xBC,0x19,0x00,0x8D,0x2B,0x1D,0x00,0xD2,0x37,0x1D,0x00,0xD1,
-                0x5E,0x1D,0x00,0xF6,0x5E,0x1D,0x00,0xF7,0x5E,0x1D,0x00,0xF8,0x5E,0x1D,0x00,0xF9,0x5E,0x1D,0x00,0x41,0x84,0x1D,0x00,0x60,0xF1,
-                0x1D,0x00,0xF3,0xB2,0x1E,0x00,0xD9,0xFB,0x1E,0x00,0xDA,0xFB,0x1E,0x00,0xDB,0xFB,0x1E,0x00,0x57,0x1C,0x1F,0x00,0x67,0x1C,0x1F,
-                0x00,0xC5,0xAE,0x1F,0x00,0xC3,0xAF,0x1F,0x01,0xCA,0x99,0xE0,0x00,0x55,0x2A,0x8D,0x02,0xD3,0x7A,0x81,0x01,0xD4,0xF1,0x90,0x02,
-                0xDD,0x49,0x12,0x04,0x53,0x9F,0x54,0x01,0xE4,0x78,0x1D,0x03,0x4E,0x7F,0x43,0x03,0x73,0xA6,0x4B,0x07,0x4D,0x31,0xB8,0x00,0x91,
-                0xB4,0x5D,0x02,0x54,0x68,0xF3,0x00,0x99,0xC3,0x25,0x01,0x42,0x3F,0x26,0x01,0x11,0xF2,0xD2,0x02,0xD9,0xEA,0xB9,0x03,0x56,0x64,
-                0x0C,0x04
-            };
+            ReadOnlySpan<byte> data = File.ReadAllBytes("simtype_init.bin");
             var newData = new byte[data.Length + newNames.Length * 8];
             var currentLen = data.Read<int>(4);
             var listSize = currentLen * 4;
@@ -92,7 +84,7 @@ namespace ModelSwapper
             {
                 var hash = GetHash(name);
                 newData.Write(eol1, id);
-                newData.Write(eol2, id);
+                newData.Write(eol2, hash);
                 eol1 += 4;
                 eol2 += 4;
             }
@@ -126,12 +118,12 @@ namespace ModelSwapper
 
         static void Main(string[] args)
         {
-            const string bundlePath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\002\BundleTarget\BigFile_0002.big";
-            const string patchPath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\002\Patches\Patch_0000.big";
+            const string bundlePath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\001\BundleTarget\generated_patch.big";
+            const string patchPath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\001\Patches\zpatch.big";
 
             var simtypeTable = new (int id, string name, byte[] data)[]
             {
-                BuildTuple(Fab.Torso, "clothing_peasant03_torso"),
+                BuildTuple(Fab.Torso, "mburbea_clothing_peasant03_torso", 0x_1F_E6_77),
                 //BuildTuple(201, id:677345, Fab.Head, "Clothing_Peasant03_Legs"),
                 //BuildTuple(202, id:677346, Fab.Legs, "Clothing_Peasant03_Head"),
                 //BuildTuple(203, id:677347, Fab.Feet, "Clothing_Peasant03_Feet")
@@ -139,15 +131,20 @@ namespace ModelSwapper
             // simtypeMGR
             var simtypeMgr = BuildSimtypeMgrBundle(simtypeTable.Select(x => x.id));
             File.WriteAllBytes("simtype_mgr.bundle", simtypeMgr);
-            File.WriteAllBytes(bundlePath, BuildBigFile((0x036ca018, simtypeMgr, 0x14)));
+            File.WriteAllBytes(bundlePath, BuildBigFile((0x_03_FF_6F_48, simtypeMgr, 0x14)));
 
             // simtype init table
             var simtypeInitFile = BuildSimtypeInit(simtypeTable.Select(x => (x.id, x.name)).ToArray());
             File.WriteAllBytes("simtype_init.bin", simtypeInitFile);
             // simtype bundle.
-            File.WriteAllBytes(patchPath, BuildBigFile(fileTable:
-                new[] { (id: 0x01c3c5c0, simtypeInitFile, 0x14) }.Concat(
-                simtypeTable.Select(x => (x.id, x.data, 0x94))).ToArray()));
+            File.WriteAllBytes(patchPath,
+              BuildBigFile(
+                  new[] { (0x0, Array.Empty<byte>(), 0x90), (0x0172fb46, simtypeInitFile, 0x14)  }
+                  .Concat(
+                    simtypeTable.Select(x => (x.id, x.data, 0x94))
+                    )
+                    .ToArray()));
+
         }
 
         static void Write<T>(this byte[] bytes, int offset, T value)
