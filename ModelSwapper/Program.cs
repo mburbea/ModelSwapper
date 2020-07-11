@@ -129,7 +129,7 @@ namespace ModelSwapper
             
             var simtypeTable = new (int bigFileId, int id, string name, byte[] data)[]
             {
-                BuildTuple(8675309, simtypeId:677344, Fab.Torso, "Clothing_Peasant03_Torso"),
+                BuildTuple(0x02253b70, simtypeId:0x02253b70, Fab.Torso, "Clothing_Peasant03_Torso"),
                 //BuildTuple(201, id:677345, Fab.Head, "Clothing_Peasant03_Legs"),
                 //BuildTuple(202, id:677346, Fab.Legs, "Clothing_Peasant03_Head"),
                 //BuildTuple(203, id:677347, Fab.Feet, "Clothing_Peasant03_Feet")
@@ -137,14 +137,14 @@ namespace ModelSwapper
             // simtypeMGR
             var simtypeMgr = BuildSimtypeMgrBundle(simtypeTable.Select(x => x.id));
             File.WriteAllBytes("simtype_mgr.bundle", simtypeMgr);
-            File.WriteAllBytes(bundlePath, BuildBigFile((14, simtypeMgr, 0x14)));
+            File.WriteAllBytes(bundlePath, BuildBigFile((0x3f8b20b, simtypeMgr, 0x14)));
 
             // simtype init table
             var simtypeInitFile = BuildSimtypeInit(simtypeTable.Select(x => (x.id, x.name)).ToArray());
             File.WriteAllBytes("simtype_init.bin", simtypeInitFile);
             // simtype bundle.
             File.WriteAllBytes(patchPath, BuildBigFile(fileTable:
-                new[] { (id: 119, simtypeInitFile, 0x14) }.Concat(
+                new[] { (id: 0x01c3c5c0, simtypeInitFile, 0x14) }.Concat(
                 simtypeTable.Select(x => (x.bigFileId, x.data, 0x94))).ToArray()));
         }
 
