@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -16,33 +17,12 @@ namespace ModelSwapper
 
     static class Program
     {
-        static int GetHash(string val)
-        {
-            val = val.ToLowerInvariant();
-            ReadOnlySpan<byte> data = new byte[]
-            {
-                0x7F,0x00,0x00,0x00,0x2B,0x03,0x00,0x00,0x3D,0x06,0x00,0x00,0x53,0x08,0x00,0x00,0xBD,0x0A,0x00,0x00,0x97,0x12,0x00,0x00,0x97,
-                0x15,0x00,0x00,0x41,0x17,0x00,0x00,0xB5,0x1F,0x00,0x00,0x43,0x25,0x00,0x00,0x21,0x28,0x00,0x00,0x01,0x2A,0x00,0x00,0x97,0x2B,
-                0x00,0x00,0x0D,0x30,0x00,0x00,0xA1,0x33,0x00,0x00,0x7F,0x37,0x00,0x00,0x35,0x3C,0x00,0x00,0x11,0x45,0x00,0x00,0xE5,0x48,0x00,
-                0x00,0x45,0x4A,0x00,0x00,0x61,0x52,0x00,0x00,0x23,0x56,0x00,0x00,0x17,0x62,0x00,0x00,0xC9,0x64,0x00,0x00,0x41,0x6B,0x00,0x00,
-                0x99,0x6D,0x00,0x00,0x8D,0x73,0x00,0x00,0x59,0x78,0x00,0x00,0x63,0x7F,0x00,0x00,0xA5,0x86,0x00,0x00,0xE3,0x8C,0x00,0x00,0x87,
-                0x92,0x00,0x00,0x43,0x97,0x00,0x00,0x9D,0x9C,0x00,0x00,0xFF,0xA3,0x00,0x00,0x39,0xA9,0x00,0x00,0x1B,0xB0,0x00,0x00,0x47,0xB9,
-                0x00,0x00,0x03,0xC2,0x00,0x00,0x4F,0xC6,0x00,0x00,0xCD,0xD0,0x00,0x00,0xAD,0xD8,0x00,0x00,0x69,0xDF,0x00,0x00,0xE9,0xE7,0x00,
-                0x00,0x23,0xF2,0x00,0x00,0x2F,0xFE,0x00,0x00,0xCD,0x1E,0x01,0x00,0x19,0x30,0x01,0x00,0xFF,0x48,0x01,0x00,0xB1,0x5B,0x01,0x00
-            };
-            var hashtable = MemoryMarshal.Cast<byte, int>(data);
-            int hash = 0;
-            for (int i = val.Length - 1; i > -1; i--)
-            {
-                int c = val[i];
-                hash += (i + 1) * hashtable[c % 50] + (c * hashtable[i % 50]);
-            }
-            
-           return hash;
-        }
+        static Dictionary<uint, string> FabDict = File.ReadAllLines("fab.csv").Skip(1)
+                .ToDictionary(line => uint.Parse(line[..6], NumberStyles.HexNumber, CultureInfo.InvariantCulture),
+                line => line[7..]);
 
         static (int id, string name, byte[] data) BuildTuple(Fab fab, string name, int? loc= null)
-            => (loc ?? GetHash(name), name, LoadModifiedSimtype(fab));
+            => (loc ?? Hasher.GetHash(name), name, LoadModifiedSimtype(fab));
 
 
         static byte[] BuildSimtypeMgrBundle(IEnumerable<int> entries)
@@ -65,7 +45,22 @@ namespace ModelSwapper
         static byte[] LoadModifiedSimtype(Fab fab)
         {
             //todo.
-            return File.ReadAllBytes($"{fab}.simtype_bxml");
+            var bytes =  File.ReadAllBytes($"{fab}.simtype_bxml");
+            ReadOnlySpan<byte> target = new byte[9] { 0x07, 0, 0, 0, 0, 0, 0, 0, 0 };
+            var ix = bytes.AsSpan().IndexOf(target);
+            var maleFabId = bytes.Read<uint>(ix + 9);
+            var femaleFabId = bytes.Read<uint>(ix + 13);
+            var maleReplacement = FabDict[maleFabId].ToLowerInvariant().Replace("almain", "Dokkalfar").Replace("varani", "Dokkalfar").Replace("01","02");
+            var femaleReplacement = FabDict[femaleFabId].ToLowerInvariant().Replace("almain", "Dokkalfar").Replace("varani", "Dokkalfar").Replace("01", "02");
+            if (fab != Fab.Head)
+            {
+                var newMaleId = FabDict.First(x => x.Value.Equals(maleReplacement, StringComparison.OrdinalIgnoreCase)).Key;
+                bytes.Write(ix + 9, newMaleId);
+            }
+            var newFemaleId = FabDict.First(x => x.Value.Equals(femaleReplacement, StringComparison.OrdinalIgnoreCase)).Key;
+            bytes.Write(ix + 13, newFemaleId);
+
+            return bytes;
         }
 
         static byte[] BuildSimtypeInit(params (int simtypeId, string name)[] newNames)
@@ -82,7 +77,7 @@ namespace ModelSwapper
 
             foreach (var (id, name) in newNames)
             {
-                var hash = GetHash(name);
+                var hash = Hasher.GetHash(name);
                 newData.Write(eol1, id);
                 newData.Write(eol2, hash);
                 eol1 += 4;
@@ -117,16 +112,16 @@ namespace ModelSwapper
         }
 
         static void Main(string[] args)
-        {
+        {       
             const string bundlePath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\001\BundleTarget\generated_patch.big";
             const string patchPath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\001\Patches\zpatch.big";
 
             var simtypeTable = new (int id, string name, byte[] data)[]
             {
-                BuildTuple(Fab.Torso, "mburbea_clothing_peasant03_torso", 0x_1F_E6_77),
-                //BuildTuple(201, id:677345, Fab.Head, "Clothing_Peasant03_Legs"),
-                //BuildTuple(202, id:677346, Fab.Legs, "Clothing_Peasant03_Head"),
-                //BuildTuple(203, id:677347, Fab.Feet, "Clothing_Peasant03_Feet")
+                BuildTuple(Fab.Torso, "Clothing_peasant03_Torso"),
+                BuildTuple(Fab.Legs, "Clothing_Peasant03_Legs"),
+                BuildTuple(Fab.Head, "Clothing_Peasant03_Head"),
+                BuildTuple(Fab.Feet, "Clothing_Peasant03_Feet")
             };
             // simtypeMGR
             var simtypeMgr = BuildSimtypeMgrBundle(simtypeTable.Select(x => x.id));
@@ -139,7 +134,8 @@ namespace ModelSwapper
             // simtype bundle.
             File.WriteAllBytes(patchPath,
               BuildBigFile(
-                  new[] { (0x0, Array.Empty<byte>(), 0x90), (0x0172fb46, simtypeInitFile, 0x14)  }
+                  new[] { //(0x0, Array.Empty<byte>(), 0x9f),
+                   (0x01_CA_82_FD, simtypeInitFile, 0x14)  }
                   .Concat(
                     simtypeTable.Select(x => (x.id, x.data, 0x94))
                     )
@@ -154,5 +150,9 @@ namespace ModelSwapper
         static T Read<T>(this ReadOnlySpan<byte> bytes, int offset)
             where T : struct
          => MemoryMarshal.Read<T>(bytes.Slice(offset));
+
+        static T Read<T>(this byte[] bytes, int offset)
+            where T : struct
+         => ((ReadOnlySpan<byte>)bytes).Read<T>(offset);
     }
 }
