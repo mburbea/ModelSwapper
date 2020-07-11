@@ -40,8 +40,8 @@ namespace ModelSwapper
             return hash;
         }
 
-        static (int bigFileId, int id, string name, byte[] data) BuildTuple(int bigFileId, int simtypeId, Fab fab, string name)
-            => (bigFileId, simtypeId, name, LoadModifiedSimtype(fab));
+        static (int id, string name, byte[] data) BuildTuple(Fab fab, string name)
+            => (GetHash(name), name, LoadModifiedSimtype(fab));
 
 
         static byte[] BuildSimtypeMgrBundle(IEnumerable<int> entries)
@@ -92,7 +92,7 @@ namespace ModelSwapper
             {
                 var hash = GetHash(name);
                 newData.Write(eol1, id);
-                newData.Write(eol2, hash);
+                newData.Write(eol2, id);
                 eol1 += 4;
                 eol2 += 4;
             }
@@ -129,9 +129,9 @@ namespace ModelSwapper
             const string bundlePath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\002\BundleTarget\BigFile_0002.big";
             const string patchPath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\002\Patches\Patch_0000.big";
 
-            var simtypeTable = new (int bigFileId, int id, string name, byte[] data)[]
+            var simtypeTable = new (int id, string name, byte[] data)[]
             {
-                BuildTuple(8675309, simtypeId:8675309, Fab.Torso, "Clothing_Peasant03_Torso"),
+                BuildTuple(Fab.Torso, "clothing_peasant03_torso"),
                 //BuildTuple(201, id:677345, Fab.Head, "Clothing_Peasant03_Legs"),
                 //BuildTuple(202, id:677346, Fab.Legs, "Clothing_Peasant03_Head"),
                 //BuildTuple(203, id:677347, Fab.Feet, "Clothing_Peasant03_Feet")
@@ -147,7 +147,7 @@ namespace ModelSwapper
             // simtype bundle.
             File.WriteAllBytes(patchPath, BuildBigFile(fileTable:
                 new[] { (id: 0x01c3c5c0, simtypeInitFile, 0x14) }.Concat(
-                simtypeTable.Select(x => (x.bigFileId, x.data, 0x94))).ToArray()));
+                simtypeTable.Select(x => (x.id, x.data, 0x94))).ToArray()));
         }
 
         static void Write<T>(this byte[] bytes, int offset, T value)
