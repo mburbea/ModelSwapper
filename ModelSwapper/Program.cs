@@ -40,8 +40,8 @@ namespace ModelSwapper
             return hash;
         }
 
-        static (int bigFileId, int id, string name, byte[] data) BuildTuple(int bigFileId, int id, Fab fab, string name)
-            => (bigFileId, id, name, LoadModifiedSimtype(fab));
+        static (int bigFileId, int id, string name, byte[] data) BuildTuple(int bigFileId, int simtypeId, Fab fab, string name)
+            => (bigFileId, simtypeId, name, LoadModifiedSimtype(fab));
 
 
         static byte[] BuildSimtypeMgrBundle(IEnumerable<int> entries)
@@ -66,7 +66,7 @@ namespace ModelSwapper
             return File.ReadAllBytes($"{fab}.simtype_bxml");
         }
 
-        static byte[] BuildSimtypeInit(params (int id, string name)[] newNames)
+        static byte[] BuildSimtypeInit(params (int simtypeId, string name)[] newNames)
         {
             ReadOnlySpan<byte> data = new byte[]
             {
@@ -130,17 +130,22 @@ namespace ModelSwapper
 
             var simtypeTable = new[]
             {
-                BuildTuple(200, id:677344, Fab.Torso, "Clothing_Peasant03_Torso"),
+                BuildTuple(8675309, simtypeId:677344, Fab.Torso, "Clothing_Peasant03_Torso"),
                 //BuildTuple(201, id:677345, Fab.Head, "Clothing_Peasant03_Legs"),
                 //BuildTuple(202, id:677346, Fab.Legs, "Clothing_Peasant03_Head"),
                 //BuildTuple(203, id:677347, Fab.Feet, "Clothing_Peasant03_Feet")
             };
-            File.WriteAllBytes(bundlePath, BuildBigFile((14, BuildSimtypeMgrBundle(simtypeTable.Select(x => x.id)))));
+            // simtypeMGR
+            var simtypeMgr = BuildSimtypeMgrBundle(simtypeTable.Select(x => x.id));
+            File.WriteAllBytes("simtype_mgr.bundle", simtypeMgr);
+            File.WriteAllBytes(bundlePath, BuildBigFile((14, simtypeMgr)));
+
+            // simtype init table
+            var simtypeInitFile = BuildSimtypeInit(simtypeTable.Select(x => (x.id, x.name)).ToArray());
+            File.WriteAllBytes("simtype_init.bin", simtypeInitFile);
+            File.WriteAllBytes(patch2Path, BuildBigFile((id: 119,simtypeInitFile)));
+            // simtype bundle.
             File.WriteAllBytes(patchPath, BuildBigFile(simtypeTable.Select(x => (x.bigFileId, x.data)).ToArray()));
-            File.WriteAllBytes(patch2Path, BuildBigFile(
-            new[]{
-                (id: 119, BuildSimtypeInit(simtypeTable.Select(x => (x.id, x.name)).ToArray()))
-            }));
         }
 
         static void Write<T>(this byte[] bytes, int offset, T value)
