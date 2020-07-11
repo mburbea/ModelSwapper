@@ -85,6 +85,7 @@ namespace ModelSwapper
             var eol2 = eol1 + newNames.Length * 4;
             data.Slice(0, eol1).CopyTo(newData);
             data.Slice(eol1).CopyTo(newData.AsSpan(eol2));
+            newData.Write(4, listSize + newNames.Length);
             foreach(var (id, name) in newNames)
             { 
                 var hash = GetHash(name);
@@ -127,10 +128,10 @@ namespace ModelSwapper
             const string patchPath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\002\Patches\Patch_0001.big";
             var simtypeTable = new[]
             {
-                BuildTuple(200, id:1, Fab.Torso, "Clothing_Peasant03_Torso"),
-                BuildTuple(201, id:2, Fab.Head, "Clothing_Peasant03_Legs"),
-                BuildTuple(202, id:3, Fab.Legs, "Clothing_Peasant03_Head"),
-                BuildTuple(203, id:4, Fab.Feet, "Clothing_Peasant03_Feet")
+                BuildTuple(200, id:677344, Fab.Torso, "Clothing_Peasant03_Torso"),
+                BuildTuple(201, id:677345, Fab.Head, "Clothing_Peasant03_Legs"),
+                BuildTuple(202, id:677346, Fab.Legs, "Clothing_Peasant03_Head"),
+                BuildTuple(203, id:677347, Fab.Feet, "Clothing_Peasant03_Feet")
             };
             File.WriteAllBytes(bundlePath, BuildBigFile((14, BuildSimtypeMgrBundle(simtypeTable.Select(x => x.id)))));
             File.WriteAllBytes(patchPath, BuildBigFile(
