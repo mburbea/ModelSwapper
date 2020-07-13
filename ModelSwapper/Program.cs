@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Runtime.InteropServices;
 
@@ -13,7 +14,7 @@ namespace ModelSwapper
         Legs,
         Feet,
         Hands,
-        //Head
+        Head
     }
 
     static class Program
@@ -47,50 +48,34 @@ namespace ModelSwapper
         }
 
 
-        static byte[] CreateModifiedSimType(Fab fab, string maleName, string femaleName)
+        static (int id, string name, byte[] bytes) CreateModifiedSimType(Fab fab, string maleName, string femaleName, string baseSimName)
         {
             var bytes = File.ReadAllBytes($"{fab}.simtype_bxml");
             ReadOnlySpan<byte> target = new byte[8] { 0x07, 0, 0, 0, 0, 0, 0, 0 };
             var ix = bytes.AsSpan().IndexOf(target);
+            bool didChanges = false;
             if (FabDictByName.TryGetValue($"{maleName}{fab}", out var maleId))
             {
+                didChanges = true;
                 bytes.Write(ix + 9, maleId);
             }
-             if (FabDictByName.TryGetValue($"{femaleName}{fab}", out var femaleId))
-            { 
-
+            if (FabDictByName.TryGetValue($"{femaleName}{fab}", out var femaleId))
+            {
+                didChanges = true;
                 bytes.Write(ix + 13, femaleId);
             }
-            return bytes;
+            if (didChanges) {
+                var name = $"{baseSimName}{fab}";
+                return (Hasher.GetHash(name), $"{baseSimName}{fab}", bytes);            
+            }
+            return default;
         }
 
-        static (int id, string name, byte[] data)[] BuildTable(string maleName, string femaleName, string baseSimType = "Clothing_peasant03_")
+        static IEnumerable<(int id, string name, byte[] data)> BuildTable(string maleName, string femaleName, string baseSimType = "Clothing_peasant03_")
         => ((Fab[])typeof(Fab).GetEnumValues())
-                .Select(f => ($"{baseSimType}{f}", CreateModifiedSimType(f, maleName, femaleName)))
-                .Select(f => (Hasher.GetHash(f.Item1), f.Item1, f.Item2)).ToArray();
+                .Select(x => CreateModifiedSimType(x, maleName, femaleName, baseSimType))
+                .Where(x => x.bytes != null);
             
-            
-        
-
-        //static byte[] LoadModifiedSimtype(Fab fab)
-        //{
-        //    //todo.
-        //    var bytes =  File.ReadAllBytes($"{fab}.simtype_bxml");
-        //    var maleReplacement = FabDictById[maleFabId].ToLowerInvariant().Replace("almain", "Dokkalfar").Replace("varani", "Dokkalfar");
-        //    var femaleReplacement = FabDictById[femaleFabId].ToLowerInvariant().Replace("almain", "Dokkalfar").Replace("varani", "Dokkalfar");
-        //    if (fab != Fab.Head && fab != Fab.Robe)
-        //    {
-        //        var newMaleId = FabDictById.First(x => x.Value.Equals(maleReplacement, StringComparison.OrdinalIgnoreCase)).Key;
-        //        bytes.Write(ix + 9, newMaleId);
-        //    }
-        //    var newFemaleId = fab == Fab.Robe ? 1590861
-        //        : FabDictById.First(x => x.Value.Equals(femaleReplacement, StringComparison.OrdinalIgnoreCase)).Key;
-        //    bytes.Write(ix + 13, newFemaleId);
-
-        //    return bytes;
-        //}
-
-
         static byte[] BuildSimtypeInit(params (int simtypeId, string name)[] newNames)
         {
             ReadOnlySpan<byte> data = File.ReadAllBytes("simtype_init.bin");
@@ -141,10 +126,39 @@ namespace ModelSwapper
 
         static void Main(string[] args)
         {       
-            const string bundlePath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\001\BundleTarget\generated_patch.big";
-            const string patchPath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\001\Patches\zpatch.big";
-            
-            var simtypeTable = BuildTable("splinter_02_melee_Set_Unique_", "splinter_02_melee_Set_Unique_f_");
+            const string bundlePath = @"output\bigs\001\BundleTarget\generated_patch.big";
+            const string patchPath = @"output\bigs\001\Patches\zpatch.big";
+
+            var simtypeTable = BuildTable("splinter_02_melee_Set_Unique_", "splinter_02_melee_Set_Unique_f_","glowing_warrior_")
+                .Concat(BuildTable("splinter_03_Rogue_Set_Unique_", "splinter_03_Rogue_Set_Unique_f_", "glowing_rogue_"))
+                .Concat(BuildTable("01_Dokkalfar_noble_male_", "01_Dokkalfar_noble_female_", "Clothing_peasant04_"))
+                .Concat(BuildTable("02_Dokkalfar_noble_male_", "02_Dokkalfar_noble_female_", "Clothing_peasant05_"))
+                .Concat(BuildTable("01_Dokkalfar_peasant_male_", "01_Dokkalfar_peasant_female_", "Clothing_peasant06_"))
+                .Concat(BuildTable("02_Dokkalfar_peasant_male_", "02_Dokkalfar_peasant_female_", "Clothing_peasant07_"))
+                .Concat(BuildTable("01_Dokkalfar_merchant_male_", "01_Dokkalfar_merchant_female_", "Clothing_peasant08_"))
+                .Concat(BuildTable("02_Dokkalfar_merchant_male_", "02_Dokkalfar_merchant_female_", "Clothing_peasant09_"))
+
+                .Concat(BuildTable("01_Ljosalfar_noble_male_", "01_Ljosalfar_noble_female_", "Clothing_peasant10_"))
+                .Concat(BuildTable("02_Ljosalfar_noble_male_", "02_Ljosalfar_noble_female_", "Clothing_peasant11_"))
+                .Concat(BuildTable("01_Ljosalfar_peasant_male_", "01_Ljosalfar_peasant_female_", "Clothing_peasant12_"))
+                .Concat(BuildTable("02_Ljosalfar_peasant_male_", "02_Ljosalfar_peasant_female_", "Clothing_peasant13_"))
+                .Concat(BuildTable("01_Ljosalfar_merchant_male_", "01_Ljosalfar_Merchant_f_", "Clothing_peasant14_"))
+                .Concat(BuildTable("02_Ljosalfar_merchant_male_", "02_Ljosalfar_Merchant_f_", "Clothing_peasant15_"))
+                
+                .Concat(BuildTable("01_almain_merchant_male_", "01_almain_Merchant_female_", "Clothing_peasant16_"))
+                .Concat(BuildTable("02_almain_merchant_male_", "02_almain_Merchant_female_", "Clothing_peasant17_"))
+                .Concat(BuildTable("01_varani_merchant_male_", "01_varani_Merchant_female_", "Clothing_peasant18_"))
+                .Concat(BuildTable("02_varani_merchant_male_", "02_varani_Merchant_female_", "Clothing_peasant19_"))
+                .ToArray();
+            Directory.CreateDirectory(@"output\_scripts\console\");
+            if (!Directory.Exists("output"))
+            {
+                Directory.CreateDirectory(@"output\bigs\001\BundleTarget\");
+                Directory.CreateDirectory(@"output\bigs\001\Patches\");
+
+            }
+            File.Copy("createclothes.lua", @"output\_scripts\console\createclothes.lua", true);
+
             // simtypeMGR
             var simtypeMgr = BuildSimtypeMgr(simtypeTable.Select(x => x.id));
             File.WriteAllBytes("simtype_mgr.bundle", simtypeMgr);
@@ -162,6 +176,11 @@ namespace ModelSwapper
                     simtypeTable.Select(x => (x.id, x.data, 0x94))
                     )
                     .ToArray()));
+            if (File.Exists("clothingmod.zip"))
+            {
+                File.Delete("clothingmod.zip");
+            }
+            ZipFile.CreateFromDirectory("output", "clothingmod.zip");
         }
 
         static void Write<T>(this byte[] bytes, int offset, T value)

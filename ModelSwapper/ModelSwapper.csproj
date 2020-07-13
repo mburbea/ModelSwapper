@@ -12,6 +12,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="System.IO.Compression" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="createclothes.lua">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="fab.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
