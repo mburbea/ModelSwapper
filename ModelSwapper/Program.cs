@@ -10,22 +10,26 @@ namespace ModelSwapper
     enum Fab
     {
         Torso,
-        Head,
         Legs,
-        Feet
+        Feet,
+        Hands,
+        //Head
     }
 
     static class Program
     {
-        static Dictionary<uint, string> FabDict = File.ReadAllLines("fab.csv").Skip(1)
+        static Dictionary<uint, string> FabDictById = File.ReadAllLines("fab.csv").Skip(1)
                 .ToDictionary(line => uint.Parse(line[..6], NumberStyles.HexNumber, CultureInfo.InvariantCulture),
                 line => line[7..]);
 
-        static (int id, string name, byte[] data) BuildTuple(Fab fab, string name, int? loc= null)
-            => (loc ?? Hasher.GetHash(name), name, LoadModifiedSimtype(fab));
+        static Dictionary<string, uint> FabDictByName = FabDictById.ToDictionary(x => x.Value, x => x.Key, StringComparer.OrdinalIgnoreCase);
 
 
-        static byte[] BuildSimtypeMgrBundle(IEnumerable<int> entries)
+        //static (int id, string name, byte[] data) BuildTuple(Fab fab, string name, int? loc= null)
+        //    => (loc ?? Hasher.GetHash(name), name, LoadModifiedSimtype(fab));
+
+
+        static byte[] BuildSimtypeMgr(IEnumerable<int> entries)
         {
             static byte[] WriteSimtypeMgrInternal(int[] entries)
             {
@@ -42,26 +46,50 @@ namespace ModelSwapper
             return WriteSimtypeMgrInternal(new[] {unchecked((int)0x80_00_1F_C2u), unchecked((int)0x80_1d_80_74u) }.Concat(entries).ToArray());
         }
 
-        static byte[] LoadModifiedSimtype(Fab fab)
-        {
-            //todo.
-            var bytes =  File.ReadAllBytes($"{fab}.simtype_bxml");
-            ReadOnlySpan<byte> target = new byte[9] { 0x07, 0, 0, 0, 0, 0, 0, 0, 0 };
-            var ix = bytes.AsSpan().IndexOf(target);
-            var maleFabId = bytes.Read<uint>(ix + 9);
-            var femaleFabId = bytes.Read<uint>(ix + 13);
-            var maleReplacement = FabDict[maleFabId].ToLowerInvariant().Replace("almain", "Dokkalfar").Replace("varani", "Dokkalfar").Replace("01","02");
-            var femaleReplacement = FabDict[femaleFabId].ToLowerInvariant().Replace("almain", "Dokkalfar").Replace("varani", "Dokkalfar").Replace("01", "02");
-            if (fab != Fab.Head)
-            {
-                var newMaleId = FabDict.First(x => x.Value.Equals(maleReplacement, StringComparison.OrdinalIgnoreCase)).Key;
-                bytes.Write(ix + 9, newMaleId);
-            }
-            var newFemaleId = FabDict.First(x => x.Value.Equals(femaleReplacement, StringComparison.OrdinalIgnoreCase)).Key;
-            bytes.Write(ix + 13, newFemaleId);
 
+        static byte[] CreateModifiedSimType(Fab fab, string maleName, string femaleName)
+        {
+            var bytes = File.ReadAllBytes($"{fab}.simtype_bxml");
+            ReadOnlySpan<byte> target = new byte[8] { 0x07, 0, 0, 0, 0, 0, 0, 0 };
+            var ix = bytes.AsSpan().IndexOf(target);
+            if (FabDictByName.TryGetValue($"{maleName}{fab}", out var maleId))
+            {
+                bytes.Write(ix + 9, maleId);
+            }
+             if (FabDictByName.TryGetValue($"{femaleName}{fab}", out var femaleId))
+            { 
+
+                bytes.Write(ix + 13, femaleId);
+            }
             return bytes;
         }
+
+        static (int id, string name, byte[] data)[] BuildTable(string maleName, string femaleName, string baseSimType = "Clothing_peasant03_")
+        => ((Fab[])typeof(Fab).GetEnumValues())
+                .Select(f => ($"{baseSimType}{f}", CreateModifiedSimType(f, maleName, femaleName)))
+                .Select(f => (Hasher.GetHash(f.Item1), f.Item1, f.Item2)).ToArray();
+            
+            
+        
+
+        //static byte[] LoadModifiedSimtype(Fab fab)
+        //{
+        //    //todo.
+        //    var bytes =  File.ReadAllBytes($"{fab}.simtype_bxml");
+        //    var maleReplacement = FabDictById[maleFabId].ToLowerInvariant().Replace("almain", "Dokkalfar").Replace("varani", "Dokkalfar");
+        //    var femaleReplacement = FabDictById[femaleFabId].ToLowerInvariant().Replace("almain", "Dokkalfar").Replace("varani", "Dokkalfar");
+        //    if (fab != Fab.Head && fab != Fab.Robe)
+        //    {
+        //        var newMaleId = FabDictById.First(x => x.Value.Equals(maleReplacement, StringComparison.OrdinalIgnoreCase)).Key;
+        //        bytes.Write(ix + 9, newMaleId);
+        //    }
+        //    var newFemaleId = fab == Fab.Robe ? 1590861
+        //        : FabDictById.First(x => x.Value.Equals(femaleReplacement, StringComparison.OrdinalIgnoreCase)).Key;
+        //    bytes.Write(ix + 13, newFemaleId);
+
+        //    return bytes;
+        //}
+
 
         static byte[] BuildSimtypeInit(params (int simtypeId, string name)[] newNames)
         {
@@ -115,16 +143,10 @@ namespace ModelSwapper
         {       
             const string bundlePath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\001\BundleTarget\generated_patch.big";
             const string patchPath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\001\Patches\zpatch.big";
-
-            var simtypeTable = new (int id, string name, byte[] data)[]
-            {
-                BuildTuple(Fab.Torso, "Clothing_peasant03_Torso"),
-                BuildTuple(Fab.Legs, "Clothing_Peasant03_Legs"),
-                BuildTuple(Fab.Head, "Clothing_Peasant03_Head"),
-                BuildTuple(Fab.Feet, "Clothing_Peasant03_Feet")
-            };
+            
+            var simtypeTable = BuildTable("splinter_02_melee_Set_Unique_", "splinter_02_melee_Set_Unique_f_");
             // simtypeMGR
-            var simtypeMgr = BuildSimtypeMgrBundle(simtypeTable.Select(x => x.id));
+            var simtypeMgr = BuildSimtypeMgr(simtypeTable.Select(x => x.id));
             File.WriteAllBytes("simtype_mgr.bundle", simtypeMgr);
             File.WriteAllBytes(bundlePath, BuildBigFile((0x_03_FF_6F_48, simtypeMgr, 0x14)));
 
@@ -134,13 +156,12 @@ namespace ModelSwapper
             // simtype bundle.
             File.WriteAllBytes(patchPath,
               BuildBigFile(
-                  new[] { //(0x0, Array.Empty<byte>(), 0x9f),
+                  new[] {
                    (0x01_CA_82_FD, simtypeInitFile, 0x14)  }
                   .Concat(
                     simtypeTable.Select(x => (x.id, x.data, 0x94))
                     )
                     .ToArray()));
-
         }
 
         static void Write<T>(this byte[] bytes, int offset, T value)

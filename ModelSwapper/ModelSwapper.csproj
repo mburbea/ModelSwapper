@@ -18,10 +18,16 @@
     <None Update="feet.simtype_bxml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="hands.simtype_bxml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="head.simtype_bxml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="legs.simtype_bxml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="robe.simtype_bxml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="simtype_init.bin">
