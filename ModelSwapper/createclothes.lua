@@ -24,7 +24,7 @@ end
 name_and_create_set('glowing_warrior_', 'Glowing Warrior ', false)
 name_and_create_set('glowing_rogue_', 'Glowing Rogue ', false)
 
-
+name_and_create_set('Clothing_peasant03_', 'Generic Peasant ', false)
 name_and_create_set('Clothing_peasant04_', 'Dokkalfar Noble ', false)
 name_and_create_set('Clothing_peasant05_', 'Dokkalfar Alt Noble ', false)
 name_and_create_set('Clothing_peasant06_', 'Dokkalfar Peasant ', true)
@@ -43,3 +43,8 @@ name_and_create_set('Clothing_peasant16_', 'Almain Merchant ', false)
 name_and_create_set('Clothing_peasant17_', 'Almain Alt Merchant ', false)
 name_and_create_set('Clothing_peasant18_', 'Verani Merchant ', false)
 name_and_create_set('Clothing_peasant19_', 'Verani Alt Merchant ', false)
+
+name_and_create_set('Clothing_peasant20_', 'Almain Noble ', false)
+name_and_create_set('Clothing_peasant21_', 'Almain Alt Noble ', false)
+name_and_create_set('Clothing_peasant22_', 'Verani Noble ', false)
+name_and_create_set('Clothing_peasant23_', 'Verani Alt Noble ', false)

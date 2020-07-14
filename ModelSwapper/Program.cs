@@ -19,11 +19,9 @@ namespace ModelSwapper
 
     static class Program
     {
-        static Dictionary<uint, string> FabDictById = File.ReadAllLines("fab.csv").Skip(1)
-                .ToDictionary(line => uint.Parse(line[..6], NumberStyles.HexNumber, CultureInfo.InvariantCulture),
-                line => line[7..]);
-
-        static Dictionary<string, uint> FabDictByName = FabDictById.ToDictionary(x => x.Value, x => x.Key, StringComparer.OrdinalIgnoreCase);
+        static readonly Dictionary<string, uint> FabDictByName = File.ReadAllLines("fab.csv")
+            .Skip(1)
+            .ToDictionary(line => line[7..], line => uint.Parse(line[..6], NumberStyles.HexNumber, CultureInfo.InvariantCulture), StringComparer.OrdinalIgnoreCase);
 
 
         //static (int id, string name, byte[] data) BuildTuple(Fab fab, string name, int? loc= null)
@@ -125,12 +123,14 @@ namespace ModelSwapper
         }
 
         static void Main(string[] args)
-        {       
+        {   
             const string bundlePath = @"output\bigs\001\BundleTarget\generated_patch.big";
             const string patchPath = @"output\bigs\001\Patches\zpatch.big";
+            FabDictByName.Add("01_generic_peasant_female_feet", FabDictByName["01_generic_female_peasant_feet"]);
 
             var simtypeTable = BuildTable("splinter_02_melee_Set_Unique_", "splinter_02_melee_Set_Unique_f_","glowing_warrior_")
                 .Concat(BuildTable("splinter_03_Rogue_Set_Unique_", "splinter_03_Rogue_Set_Unique_f_", "glowing_rogue_"))
+                .Concat(BuildTable("01_generic_male_peasant_", "01_generic_peasant_female_", "Clothing_peasant03_"))
                 .Concat(BuildTable("01_Dokkalfar_noble_male_", "01_Dokkalfar_noble_female_", "Clothing_peasant04_"))
                 .Concat(BuildTable("02_Dokkalfar_noble_male_", "02_Dokkalfar_noble_female_", "Clothing_peasant05_"))
                 .Concat(BuildTable("01_Dokkalfar_peasant_male_", "01_Dokkalfar_peasant_female_", "Clothing_peasant06_"))
@@ -149,6 +149,11 @@ namespace ModelSwapper
                 .Concat(BuildTable("02_almain_merchant_male_", "02_almain_Merchant_female_", "Clothing_peasant17_"))
                 .Concat(BuildTable("01_varani_merchant_male_", "01_varani_Merchant_female_", "Clothing_peasant18_"))
                 .Concat(BuildTable("02_varani_merchant_male_", "02_varani_Merchant_female_", "Clothing_peasant19_"))
+                .Concat(BuildTable("01_almain_noble_male_", "01_almain_noble_female_", "Clothing_peasant20_"))
+                .Concat(BuildTable("02_almain_noble_male_", "02_almain_noble_female_", "Clothing_peasant21_"))
+                .Concat(BuildTable("01_varani_noble_male_", "01_varani_noble_female_", "Clothing_peasant22_"))
+                .Concat(BuildTable("02_varani_noble_male_", "02_varani_noble_female_", "Clothing_peasant23_"))
+
                 .ToArray();
             Directory.CreateDirectory(@"output\_scripts\console\");
             if (!Directory.Exists("output"))
