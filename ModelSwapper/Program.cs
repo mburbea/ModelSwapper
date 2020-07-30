@@ -70,7 +70,7 @@ namespace ModelSwapper
             {
                 femaleId = bytes.Read<uint>(ix + 13);
             }
-            if (didChanges) {
+            if (didChanges || true) {
 
                 var name = $"{baseSimName}{fab}";
                 var id = Hasher.GetHash(name);
@@ -144,7 +144,7 @@ namespace ModelSwapper
             const string patchPath = @"C:\Program Files (x86)\Steam\steamapps\common\KOAReckoning\bigs\001\Patches\zpatch.big";
             FabDictByName.Add("01_generic_peasant_female_feet", FabDictByName["01_generic_female_peasant_feet"]);
 
-            var simtypeTable = BuildTable("splinter_02_melee_Set_Unique_", "splinter_02_melee_Set_Unique_f_","glowing_warrior_")
+            var simtypeTable = BuildTable("splinter_02_melee_Set_Unique_X", "splinter_02_melee_Set_Unique_f_X","glowing_warrior_")
                 //.Concat(BuildTable("splinter_03_Rogue_Set_Unique_", "splinter_03_Rogue_Set_Unique_f_", "glowing_rogue_"))
                 //.Concat(BuildTable("01_generic_male_peasant_", "01_generic_peasant_female_", "Clothing_peasant03_"))
                 //.Concat(BuildTable("01_Dokkalfar_noble_male_", "01_Dokkalfar_noble_female_", "Clothing_peasant04_"))
