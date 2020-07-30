@@ -21,13 +21,13 @@ local name_and_create_set = function(base_sim, base_name, equip)
     end
 end
 
-name_and_create_set('glowing_warrior_', 'Glowing Warrior ', false)
+name_and_create_set('glowing_warrior_', 'Glowing Warrior ', true)
 name_and_create_set('glowing_rogue_', 'Glowing Rogue ', false)
 
 name_and_create_set('Clothing_peasant03_', 'Generic Peasant ', false)
 name_and_create_set('Clothing_peasant04_', 'Dokkalfar Noble ', false)
 name_and_create_set('Clothing_peasant05_', 'Dokkalfar Alt Noble ', false)
-name_and_create_set('Clothing_peasant06_', 'Dokkalfar Peasant ', true)
+name_and_create_set('Clothing_peasant06_', 'Dokkalfar Peasant ', false)
 name_and_create_set('Clothing_peasant07_', 'Dokkalfar Alt Peasant ', false)
 name_and_create_set('Clothing_peasant08_', 'Dokkalfar Merchant ', false)
 name_and_create_set('Clothing_peasant09_', 'Dokkalfar Alt Merchant ', false)
