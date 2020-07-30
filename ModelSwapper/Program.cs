@@ -78,6 +78,8 @@ namespace ModelSwapper
                 bundleBytes.Write(8, 2);
                 bundleBytes.Write(16, maleId);
                 bundleBytes.Write(20, femaleId);
+                bundleBytes[24] = 0x10;
+                bundleBytes[25] = 0x10;
                 var bundleId = unchecked((int)0xF0_00_00_00) | id;
                 var bundle2Id = 0x20_00_00_00 | id;
                 return new SimTypeAsset(id, name, bytes, bundleId, bundleBytes, bundle2Id);            
